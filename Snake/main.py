@@ -7,9 +7,8 @@ import random
 SIZE = 40
 INITIAL_X = 50
 INITIAL_Y = 50
-SCREEN_X = 1600
-SCREEN_Y = 1000
-
+SCREEN_X = None
+SCREEN_Y = None
 class Apple:
     def __init__(self,present_screen) -> None:
         self.screen = present_screen
@@ -19,7 +18,7 @@ class Apple:
 
 
     def draw(self) -> None:
-        print(f"Apple_x = {self.x} Apple_y = {self.y}")
+        #print(f"Apple_x = {self.x} Apple_y = {self.y}")
         self.screen.blit(self.image,(self.x,self.y))
         # pg.display.update()
     
@@ -39,10 +38,10 @@ class Snake:
 
     def draw(self) -> None:
         # 66, 245, 206
-        self.screen.fill((66, 245, 206))
-        print(f"Length = {self.length}")
+        self.screen.fill((0, 0, 0))
+        #print(f"Length = {self.length}")
         for i in range(self.length):
-            print(f"x = {self.x} y = {self.y}")
+            #print(f"x = {self.x} y = {self.y}")
             self.screen.blit(self.block,(self.x[i],self.y[i]))
         # pg.display.flip()
     
@@ -72,10 +71,21 @@ class Snake:
             self.x[0] += SIZE
         
         self.draw()
+
+    def increase_length(self) -> None:
+        self.x.append(100)
+        self.y.append(100)
+        self.length += 1
         
 class Game:
     def __init__(self) -> None:
         pg.init()
+        infoObject = pg.display.Info()
+        global SCREEN_X
+        SCREEN_X = infoObject.current_w
+        global SCREEN_Y
+        SCREEN_Y = infoObject.current_h
+        print(f"Screen X = {SCREEN_X} Screen Y = {SCREEN_Y}")
         self.surface = pg.display.set_mode((SCREEN_X,SCREEN_Y))
         self.snake = Snake(self.surface,1)
         self.snake.walk()
@@ -83,25 +93,42 @@ class Game:
         self.apple.draw()
         pg.display.flip()
 
+    def reset(self) -> None:
+        self.snake = Snake(self.surface,1)
+        self.apple = Apple(self.surface)
+
+    def show_game_over(self) -> None:
+        self.surface.fill((0, 0, 0))
+        font = pg.font.SysFont('arial',30)
+        line1 = font.render(f"Game Over !! Your Score is: {self.snake.length}",True,(255,255,255))
+        self.surface.blit(line1,(SCREEN_X/2-20,SCREEN_Y/2-20))
 
     def isCollision(self,apple_x,apple_y,snake_x,snake_y) -> bool:
         if(snake_x>apple_x and snake_x<apple_x+SIZE) or (snake_x+SIZE>apple_x and snake_x+SIZE<apple_x+SIZE):
             if(snake_y>apple_y and snake_y<apple_y+SIZE) or (snake_y+SIZE>apple_y and snake_y+SIZE<apple_y+SIZE):
-                
                 return True
         return False
+
+    def display_score(self) -> None:
+        font = pg.font.SysFont('arial',30)
+        score = font.render(f"Score: {self.snake.length}",True,(255,255,255))
+        self.surface.blit(score,(SCREEN_X/2 -10,40))
 
     def play(self) -> None:
         self.snake.walk()
         self.apple.draw()
+        self.display_score()
         pg.display.flip()
+        # collision with apple
         if(self.isCollision(self.apple.x,self.apple.y,self.snake.x[0],self.snake.y[0])):
+            self.snake.increase_length()
             self.apple.move()
-            self.snake.x.append(100)
-            self.snake.y.append(100)
-            self.snake.length += 1
-            self.snake.draw()
-            pg.display.flip()
+
+        # collision with itself
+        for i in range(2,self.snake.length):
+            if(self.isCollision(self.snake.x[0],self.snake.y[0],self.snake.x[i],self.snake.y[i])):
+                raise "Collision Occured"
+
 
     def run(self) -> None:
         running = True
@@ -123,8 +150,12 @@ class Game:
                     elif event.key == K_RIGHT:
                         self.snake.move_right()
 
-            self.play()
-            time.sleep(0.2)
+            try:
+                self.play()
+            except Exception as e:
+                self.show_game_over()
+                self.reset()
+            time.sleep(0.15)
                 
 
 if __name__ == '__main__':
